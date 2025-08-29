@@ -1,5 +1,5 @@
-use macroquad::prelude::*; //using prelude module in macroquad
 use macroquad::prelude::KeyCode::*; //For giving access to keys like Up, Down, Left, Right
+use macroquad::prelude::*; //using prelude module in macroquad
 use macroquad::rand::gen_range; //For food placement in the board
 
 const GRID_W: i32 = 20; //Width of the grid
@@ -8,15 +8,20 @@ const CELL: f32 = 24.0; //Size of each grid cell
 const STEP_TIME: f32 = 0.24; //Time interva b/w the snake movements in sec
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Dir { Up, Down, Left, Right }
+enum Dir {
+    Up,
+    Down,
+    Left,
+    Right,
+}
 
 impl Dir {
     fn delta(self) -> (i32, i32) {
         match self {
-            Dir::Up    => (0, -1),
-            Dir::Down  => (0,  1),
-            Dir::Left  => (-1, 0),
-            Dir::Right => (1,  0),
+            Dir::Up => (0, -1),
+            Dir::Down => (0, 1),
+            Dir::Left => (-1, 0),
+            Dir::Right => (1, 0),
         }
     }
 }
@@ -24,15 +29,17 @@ impl Dir {
 fn is_opposite(a: Dir, b: Dir) -> bool {
     matches!(
         (a, b),
-        (Dir::Up, Dir::Down) | (Dir::Down, Dir::Up) |
-        (Dir::Left, Dir::Right) | (Dir::Right, Dir::Left)
+        (Dir::Up, Dir::Down)
+            | (Dir::Down, Dir::Up)
+            | (Dir::Left, Dir::Right)
+            | (Dir::Right, Dir::Left)
     )
 }
 
 struct Game {
-    snake: Vec<(i32, i32)>, 
-    dir: Dir,               // direction currently moving this step
-    next_dir: Dir,          // desired direction (latest user input)
+    snake: Vec<(i32, i32)>,
+    dir: Dir,      // direction currently moving this step
+    next_dir: Dir, // desired direction (latest user input)
     timer: f32,
     food: (i32, i32),
     score: u32,
@@ -74,15 +81,25 @@ impl Game {
             }
         } else {
             // 2) If no new press this frame, optionally steer by held key
-            if is_key_down(Up)    { self.next_dir = Dir::Up; }
-            if is_key_down(Down)  { self.next_dir = Dir::Down; }
-            if is_key_down(Left)  { self.next_dir = Dir::Left; }
-            if is_key_down(Right) { self.next_dir = Dir::Right; }
+            if is_key_down(Up) {
+                self.next_dir = Dir::Up;
+            }
+            if is_key_down(Down) {
+                self.next_dir = Dir::Down;
+            }
+            if is_key_down(Left) {
+                self.next_dir = Dir::Left;
+            }
+            if is_key_down(Right) {
+                self.next_dir = Dir::Right;
+            }
         }
     }
 
     fn step(&mut self) {
-        if !self.alive { return; }
+        if !self.alive {
+            return;
+        }
         if !is_opposite(self.next_dir, self.dir) {
             self.dir = self.next_dir;
         }
@@ -92,7 +109,7 @@ impl Game {
         let nx = hx + dx;
         let ny = hy + dy;
 
-        if nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H {
+        if !(0..GRID_W).contains(&nx) || !(0..GRID_H).contains(&ny) {
             self.alive = false;
             return;
         }
@@ -105,7 +122,7 @@ impl Game {
         }
 
         if new_head == self.food {
-            self.snake.insert(0, new_head); 
+            self.snake.insert(0, new_head);
             self.score += 1;
             self.spawn_food();
         } else {
@@ -117,9 +134,9 @@ impl Game {
 
 fn key_to_dir(k: KeyCode) -> Option<Dir> {
     match k {
-        Up    => Some(Dir::Up),
-        Down  => Some(Dir::Down),
-        Left  => Some(Dir::Left),
+        Up => Some(Dir::Up),
+        Down => Some(Dir::Down),
+        Left => Some(Dir::Left),
         Right => Some(Dir::Right),
         _ => None,
     }
@@ -138,7 +155,6 @@ async fn main() {
     let mut game = Game::new();
 
     loop {
-    
         game.handle_input();
 
         // UPDATE
@@ -151,15 +167,21 @@ async fn main() {
         // DRAW
         clear_background(BLACK);
         draw_rectangle(
-            0.0, 0.0,
-            GRID_W as f32 * CELL, GRID_H as f32 * CELL,
+            0.0,
+            0.0,
+            GRID_W as f32 * CELL,
+            GRID_H as f32 * CELL,
             Color::from_rgba(25, 25, 25, 255),
         );
 
         draw_cell(game.food, RED);
 
         for (i, seg) in game.snake.iter().enumerate() {
-            let color = if i == 0 { GREEN } else { Color::from_rgba(0, 180, 0, 255) };
+            let color = if i == 0 {
+                GREEN
+            } else {
+                Color::from_rgba(0, 180, 0, 255)
+            };
             draw_cell(*seg, color);
         }
 
