@@ -1,11 +1,19 @@
+//! Snake Game
+//!
+//! Aashritha Kondaveeti
+
 use macroquad::prelude::KeyCode::*; //For giving access to keys like Up, Down, Left, Right
 use macroquad::prelude::*; //using prelude module in macroquad
 use macroquad::rand::gen_range; //For food placement in the board
 
-const GRID_W: i32 = 20; //Width of the grid
-const GRID_H: i32 = 20; //Height of the grid
-const CELL: f32 = 24.0; //Size of each grid cell
-const STEP_TIME: f32 = 0.24; //Time interva b/w the snake movements in sec
+/// Width of the grid.
+const GRID_W: i32 = 20;
+/// Height of the grid.
+const GRID_H: i32 = 20; 
+/// Size of each grid cell.
+const CELL: f32 = 24.0;
+/// Time interval between the snake movements in seconds.
+const STEP_TIME: f32 = 0.24; 
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Dir {
@@ -62,14 +70,24 @@ impl Game {
     }
 
     fn spawn_food(&mut self) {
-        loop {
-            let x = gen_range(0, GRID_W);
-            let y = gen_range(0, GRID_H);
-            if !self.snake.contains(&(x, y)) {
-                self.food = (x, y);
-                break;
+        let nfree = GRID_W as usize * GRID_H as usize - self.snake.len();
+        if nfree <= 1 {
+            return;
+        }
+        
+        let mut pos = gen_range(0, nfree + 1);
+        for x in 0..GRID_W {
+            for y in 0..GRID_H {
+                if !self.snake.contains(&(x, y)) {
+                    if pos == 0 {
+                        self.food = (x, y);
+                        return;
+                    }
+                    pos -= 1;
+                }
             }
         }
+        panic!("could not place food");
     }
 
     // Always take the MOST RECENT key the user pressed; if none, optionally steer by held keys.
@@ -78,20 +96,6 @@ impl Game {
         if let Some(k) = get_last_key_pressed() {
             if let Some(d) = key_to_dir(k) {
                 self.next_dir = d;
-            }
-        } else {
-            // 2) If no new press this frame, optionally steer by held key
-            if is_key_down(Up) {
-                self.next_dir = Dir::Up;
-            }
-            if is_key_down(Down) {
-                self.next_dir = Dir::Down;
-            }
-            if is_key_down(Left) {
-                self.next_dir = Dir::Left;
-            }
-            if is_key_down(Right) {
-                self.next_dir = Dir::Right;
             }
         }
     }
@@ -121,12 +125,11 @@ impl Game {
             return;
         }
 
+        self.snake.insert(0, new_head);
         if new_head == self.food {
-            self.snake.insert(0, new_head);
             self.score += 1;
             self.spawn_food();
         } else {
-            self.snake.insert(0, new_head);
             self.snake.pop();
         }
     }
