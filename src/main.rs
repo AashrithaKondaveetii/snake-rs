@@ -1,22 +1,35 @@
-use macroquad::prelude::*; //using prelude module in macroquad
+//! Snake Game
+//!
+//! Aashritha Kondaveeti
+
 use macroquad::prelude::KeyCode::*; //For giving access to keys like Up, Down, Left, Right
+use macroquad::prelude::*; //using prelude module in macroquad
 use macroquad::rand::gen_range; //For food placement in the board
 
-const GRID_W: i32 = 20; //Width of the grid
-const GRID_H: i32 = 20; //Height of the grid
-const CELL: f32 = 24.0; //Size of each grid cell
-const STEP_TIME: f32 = 0.24; //Time interva b/w the snake movements in sec
+/// Width of the grid.
+const GRID_W: i32 = 20;
+/// Height of the grid.
+const GRID_H: i32 = 20; 
+/// Size of each grid cell.
+const CELL: f32 = 24.0;
+/// Time interval between the snake movements in seconds.
+const STEP_TIME: f32 = 0.24; 
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Dir { Up, Down, Left, Right }
+enum Dir {
+    Up,
+    Down,
+    Left,
+    Right,
+}
 
 impl Dir {
     fn delta(self) -> (i32, i32) {
         match self {
-            Dir::Up    => (0, -1),
-            Dir::Down  => (0,  1),
-            Dir::Left  => (-1, 0),
-            Dir::Right => (1,  0),
+            Dir::Up => (0, -1),
+            Dir::Down => (0, 1),
+            Dir::Left => (-1, 0),
+            Dir::Right => (1, 0),
         }
     }
 }
@@ -24,15 +37,17 @@ impl Dir {
 fn is_opposite(a: Dir, b: Dir) -> bool {
     matches!(
         (a, b),
-        (Dir::Up, Dir::Down) | (Dir::Down, Dir::Up) |
-        (Dir::Left, Dir::Right) | (Dir::Right, Dir::Left)
+        (Dir::Up, Dir::Down)
+            | (Dir::Down, Dir::Up)
+            | (Dir::Left, Dir::Right)
+            | (Dir::Right, Dir::Left)
     )
 }
 
 struct Game {
-    snake: Vec<(i32, i32)>, 
-    dir: Dir,               // direction currently moving this step
-    next_dir: Dir,          // desired direction (latest user input)
+    snake: Vec<(i32, i32)>,
+    dir: Dir,      // direction currently moving this step
+    next_dir: Dir, // desired direction (latest user input)
     timer: f32,
     food: (i32, i32),
     score: u32,
@@ -55,14 +70,24 @@ impl Game {
     }
 
     fn spawn_food(&mut self) {
-        loop {
-            let x = gen_range(0, GRID_W);
-            let y = gen_range(0, GRID_H);
-            if !self.snake.contains(&(x, y)) {
-                self.food = (x, y);
-                break;
+        let nfree = GRID_W as usize * GRID_H as usize - self.snake.len();
+        if nfree <= 1 {
+            return;
+        }
+        
+        let mut pos = gen_range(0, nfree + 1);
+        for x in 0..GRID_W {
+            for y in 0..GRID_H {
+                if !self.snake.contains(&(x, y)) {
+                    if pos == 0 {
+                        self.food = (x, y);
+                        return;
+                    }
+                    pos -= 1;
+                }
             }
         }
+        panic!("could not place food");
     }
 
     // Always take the MOST RECENT key the user pressed; if none, optionally steer by held keys.
@@ -72,17 +97,13 @@ impl Game {
             if let Some(d) = key_to_dir(k) {
                 self.next_dir = d;
             }
-        } else {
-            // 2) If no new press this frame, optionally steer by held key
-            if is_key_down(Up)    { self.next_dir = Dir::Up; }
-            if is_key_down(Down)  { self.next_dir = Dir::Down; }
-            if is_key_down(Left)  { self.next_dir = Dir::Left; }
-            if is_key_down(Right) { self.next_dir = Dir::Right; }
         }
     }
 
     fn step(&mut self) {
-        if !self.alive { return; }
+        if !self.alive {
+            return;
+        }
         if !is_opposite(self.next_dir, self.dir) {
             self.dir = self.next_dir;
         }
@@ -92,7 +113,7 @@ impl Game {
         let nx = hx + dx;
         let ny = hy + dy;
 
-        if nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H {
+        if !(0..GRID_W).contains(&nx) || !(0..GRID_H).contains(&ny) {
             self.alive = false;
             return;
         }
@@ -104,12 +125,11 @@ impl Game {
             return;
         }
 
+        self.snake.insert(0, new_head);
         if new_head == self.food {
-            self.snake.insert(0, new_head); 
             self.score += 1;
             self.spawn_food();
         } else {
-            self.snake.insert(0, new_head);
             self.snake.pop();
         }
     }
@@ -117,9 +137,9 @@ impl Game {
 
 fn key_to_dir(k: KeyCode) -> Option<Dir> {
     match k {
-        Up    => Some(Dir::Up),
-        Down  => Some(Dir::Down),
-        Left  => Some(Dir::Left),
+        Up => Some(Dir::Up),
+        Down => Some(Dir::Down),
+        Left => Some(Dir::Left),
         Right => Some(Dir::Right),
         _ => None,
     }
@@ -138,7 +158,6 @@ async fn main() {
     let mut game = Game::new();
 
     loop {
-    
         game.handle_input();
 
         // UPDATE
@@ -151,15 +170,21 @@ async fn main() {
         // DRAW
         clear_background(BLACK);
         draw_rectangle(
-            0.0, 0.0,
-            GRID_W as f32 * CELL, GRID_H as f32 * CELL,
+            0.0,
+            0.0,
+            GRID_W as f32 * CELL,
+            GRID_H as f32 * CELL,
             Color::from_rgba(25, 25, 25, 255),
         );
 
         draw_cell(game.food, RED);
 
         for (i, seg) in game.snake.iter().enumerate() {
-            let color = if i == 0 { GREEN } else { Color::from_rgba(0, 180, 0, 255) };
+            let color = if i == 0 {
+                GREEN
+            } else {
+                Color::from_rgba(0, 180, 0, 255)
+            };
             draw_cell(*seg, color);
         }
 
